@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tile, GameState, SpecialEffect, BlockchainState } from './types';
 import { GRID_SIZE, LEVELS } from './constants';
@@ -33,6 +34,8 @@ const App: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [selectedTile, setSelectedTile] = useState<{ x: number; y: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [gmConfirmationVisible, setGmConfirmationVisible] = useState(false);
+  const [gmError, setGmError] = useState<string | null>(null);
 
   const startLevel = useCallback((levelIndex: number) => {
     const level = LEVELS[levelIndex];
@@ -55,18 +58,30 @@ const App: React.FC = () => {
     if (walletAddress || isConnecting) return;
     setIsConnecting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setWalletAddress('0x862...f412');
-      setGameState(prev => ({ ...prev, walletConnected: true }));
+      const provider = (window as any).ethereum;
+      if (provider) {
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        setWalletAddress(accounts[0]);
+        setGameState(prev => ({ ...prev, walletConnected: true }));
+      } else {
+        // Fallback for demo
+        setWalletAddress('0x862...f412');
+        setGameState(prev => ({ ...prev, walletConnected: true }));
+      }
+    } catch (e) {
+      console.error("Connection failed", e);
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const onSayGM = async () => {
-    if (!walletAddress) {
-      await connectWallet();
-    }
+  const handleSayGMClick = () => {
+    setGmError(null);
+    setGmConfirmationVisible(true);
+  };
+
+  const executeSayGM = async () => {
+    setGmConfirmationVisible(false);
     setGameState(prev => ({ ...prev, blockchain: { ...prev.blockchain, isSendingGM: true } }));
     try {
       const hash = await baseL2.sayGM();
@@ -74,7 +89,8 @@ const App: React.FC = () => {
         ...prev,
         blockchain: { ...prev.blockchain, isSendingGM: false, hasSentGM: true, lastTxHash: hash }
       }));
-    } catch (e) {
+    } catch (e: any) {
+      setGmError(e.message || "Could not complete the transaction. Please check your wallet.");
       setGameState(prev => ({ ...prev, blockchain: { ...prev.blockchain, isSendingGM: false } }));
     }
   };
@@ -252,23 +268,49 @@ const App: React.FC = () => {
           </button>
           
           <div className="pt-4 border-t border-white/5">
-             <button 
-               onClick={onSayGM}
-               disabled={gameState.blockchain.isSendingGM || gameState.blockchain.hasSentGM}
-               className={`w-full py-4 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 border ${
-                 gameState.blockchain.hasSentGM 
-                 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                 : 'bg-white/5 border-white/10 text-blue-400 hover:bg-white/10'
-               }`}
-             >
-               {gameState.blockchain.isSendingGM ? 'Processing...' : (gameState.blockchain.hasSentGM ? 'GM RECORDED' : 'Say GM on Base')}
-               {!gameState.blockchain.hasSentGM && <span className="text-xs">👋</span>}
-             </button>
-             <p className="text-[9px] text-slate-600 mt-3 font-bold uppercase tracking-wider">
-               Optional social transaction. Gas fees apply.
-             </p>
+             {gameState.blockchain.hasSentGM ? (
+               <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-[2rem] text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                 GM sent! Thanks for interacting on Base.
+               </div>
+             ) : (
+               <button 
+                 onClick={handleSayGMClick}
+                 disabled={gameState.blockchain.isSendingGM}
+                 className="w-full py-4 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 border bg-white/5 border-white/10 text-blue-400 hover:bg-white/10"
+               >
+                 {gameState.blockchain.isSendingGM ? 'Broadcasting...' : 'Say GM on Base'}
+                 {!gameState.blockchain.isSendingGM && <span className="text-xs">👋</span>}
+               </button>
+             )}
+             {gmError && <p className="text-[9px] text-rose-500 mt-2 font-bold uppercase">{gmError}</p>}
           </div>
         </div>
+
+        {/* GM Confirmation Modal */}
+        {gmConfirmationVisible && (
+          <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
+            <div className="bg-[#0A0A0A] border border-white/10 p-8 rounded-[3rem] max-w-xs w-full shadow-2xl text-center">
+              <h3 className="text-xl font-black uppercase italic mb-4">Onchain Interaction</h3>
+              <p className="text-slate-400 text-xs leading-relaxed mb-8">
+                This is an optional blockchain action. It sends a transaction on Base and may require a small gas fee.
+              </p>
+              <div className="space-y-3">
+                <button 
+                  onClick={executeSayGM}
+                  className="w-full py-4 bg-[#0052FF] rounded-2xl font-black text-xs uppercase tracking-widest hover:brightness-110 transition active:scale-95"
+                >
+                  Confirm & Send
+                </button>
+                <button 
+                  onClick={() => setGmConfirmationVisible(false)}
+                  className="w-full py-4 bg-white/5 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/10"
+                >
+                  Cancel / Skip
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="mt-12 opacity-30 flex flex-col items-center gap-3">
           <p className="text-[9px] font-black uppercase tracking-[0.4em]">Optimized for Base Mainnet</p>
@@ -292,7 +334,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#030303] text-white overflow-hidden selection:bg-blue-500/30 font-sans pt-safe pb-safe">
-      {/* Header */}
       <nav className="h-[60px] xs:h-[70px] flex-none px-4 xs:px-8 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-3xl z-[100]">
         <div className="flex items-center gap-3" onClick={() => setView('welcome')}>
           <div className="w-8 h-8 xs:w-10 xs:h-10 rounded-xl bg-[#0052FF] flex items-center justify-center p-1.5 shadow-lg shadow-blue-500/30">
@@ -326,11 +367,9 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Main Container - Responsive Layout */}
       <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-3 xs:p-6 md:p-10 relative overflow-hidden min-h-0 gap-6 md:gap-12">
         <div className="absolute inset-0 bg-radial-gradient from-[#0052FF]/5 to-transparent pointer-events-none opacity-40 blur-3xl" />
         
-        {/* Left/Main Column: Game Board */}
         <div className="relative w-full max-w-[min(85vw,calc(100dvh-200px))] aspect-square order-2 md:order-1">
           <div 
             className="grid gap-1 xs:gap-1.5 bg-white/5 p-2 xs:p-3 rounded-[2.5rem] xs:rounded-[3.5rem] border border-white/10 w-full h-full relative z-10 shadow-[0_0_100px_rgba(0,0,0,0.5)] backdrop-blur-md"
@@ -348,9 +387,7 @@ const App: React.FC = () => {
           <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-blue-500/10 blur-xl rounded-full opacity-50" />
         </div>
 
-        {/* Right/Side Column: Stats Dashboard */}
         <div className="w-full md:w-[280px] flex flex-row md:flex-col gap-3 xs:gap-4 order-1 md:order-2">
-          {/* Moves Card */}
           <div className="flex-1 md:flex-none bg-white/5 border border-white/10 rounded-2xl xs:rounded-3xl p-3 xs:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-colors">
             <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full" />
             <p className="text-[8px] xs:text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] mb-1">Energy / Moves</p>
@@ -362,7 +399,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Score Card */}
           <div className="flex-1 md:flex-none bg-white/5 border border-white/10 rounded-2xl xs:rounded-3xl p-3 xs:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-colors">
             <div className="absolute bottom-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full" />
             <div className="flex justify-between items-center mb-1">
@@ -382,11 +418,10 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Extra Sidebar Info - GM Quick Toggle */}
           <div className="hidden md:block mt-auto p-5 bg-blue-500/5 border border-blue-500/10 rounded-[2rem]">
              <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-3 italic">Social Context</p>
              <button 
-               onClick={onSayGM}
+               onClick={handleSayGMClick}
                disabled={gameState.blockchain.hasSentGM || gameState.blockchain.isSendingGM}
                className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center justify-center gap-2"
              >
@@ -395,7 +430,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Status Overlays */}
         {gameState.status === 'won' && (
           <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-4 animate-in fade-in zoom-in duration-300">
             <div className="bg-[#0A0A0A] border border-white/10 p-8 xs:p-10 rounded-[4rem] shadow-[0_0_100px_rgba(0,82,255,0.3)] w-full max-w-sm text-center relative overflow-hidden">
@@ -417,7 +451,7 @@ const App: React.FC = () => {
                 <div className="pt-2">
                    <p className="text-[8px] text-slate-600 mb-2 uppercase font-bold tracking-widest">Optional Action:</p>
                    <button 
-                     onClick={onSayGM}
+                     onClick={handleSayGMClick}
                      disabled={gameState.blockchain.hasSentGM || gameState.blockchain.isSendingGM}
                      className="w-full py-3 bg-blue-500/5 border border-blue-500/20 rounded-[1.5rem] text-[9px] font-black uppercase text-blue-400 tracking-widest flex items-center justify-center gap-2"
                    >
@@ -449,7 +483,6 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Footer Network Indicator */}
       <footer className="h-[40px] xs:h-[50px] flex-none px-8 flex items-center justify-center border-t border-white/5 bg-black/40 backdrop-blur-xl">
         <div className="flex items-center gap-6 text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">
            <div className="flex items-center gap-2">
@@ -458,7 +491,7 @@ const App: React.FC = () => {
            </div>
            <div className="h-3 w-px bg-white/10" />
            <p className="hidden xs:block">Build something that matters</p>
-           {gameState.blockchain.hasSentGM && <p className="text-emerald-500">GM SENT ✅</p>}
+           {gameState.blockchain.hasSentGM && <p className="text-emerald-500 font-black">GM SENT ✅</p>}
         </div>
       </footer>
     </div>

@@ -1,18 +1,58 @@
+
 import { LeaderboardEntry } from '../types';
 
+// Using a lightweight approach for transaction handling
+const GM_CONTRACT_ADDRESS = '0xc2F61dcD24404fC4C89a3fd53Dfb5af659b441e8';
+const BASE_MAINNET_CHAIN_ID = '0x2105'; // 8453 in hex
+
 /**
- * BASE MAINNET BLOCKCHAIN SERVICE
- * 
- * Official Base RPC: https://mainnet.base.org
- * Contract Address (Example): 0x4200000000000000000000000000000000000069
- * 
- * Compliance:
- * 1. No automatic transactions.
- * 2. All onchain actions are strictly user-initiated.
- * 3. Gameplay is fully usable offchain.
+ * Compliance: 
+ * 1. User-initiated only.
+ * 2. No token transfers.
+ * 3. Base Mainnet.
  */
 
-const BASE_RPC_URL = 'https://mainnet.base.org';
+export const sayGM = async (): Promise<string> => {
+  const provider = (window as any).ethereum;
+  if (!provider) {
+    throw new Error('No wallet provider found. Please open this in Base.app or a Web3 browser.');
+  }
+
+  // Request account access if not already granted
+  const accounts = await provider.request({ method: 'eth_requestAccounts' });
+  if (!accounts || accounts.length === 0) {
+    throw new Error('Wallet connection required for this optional action.');
+  }
+
+  // Check network
+  const chainId = await provider.request({ method: 'eth_chainId' });
+  if (chainId !== BASE_MAINNET_CHAIN_ID) {
+    try {
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: BASE_MAINNET_CHAIN_ID }],
+      });
+    } catch (switchError: any) {
+      throw new Error('Please switch your wallet to Base Mainnet to say GM.');
+    }
+  }
+
+  // minimal ABI for sayGM()
+  // Function signature: 0x56a64095
+  const transactionParameters = {
+    to: GM_CONTRACT_ADDRESS,
+    from: accounts[0],
+    data: '0x56a64095', 
+    value: '0x0',
+  };
+
+  const txHash = await provider.request({
+    method: 'eth_sendTransaction',
+    params: [transactionParameters],
+  });
+
+  return txHash;
+};
 
 const MOCK_INDEXED_DATA: LeaderboardEntry[] = [
   { rank: 1, address: '0x4b2...11a9', score: 38400, levelId: 1 },
@@ -23,25 +63,12 @@ const MOCK_INDEXED_DATA: LeaderboardEntry[] = [
 ];
 
 export const submitScore = async (levelId: number, score: number): Promise<string> => {
-  console.log(`[Base Service] submitScore(${levelId}, ${score})`);
   await new Promise(resolve => setTimeout(resolve, 1500));
   return '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
 };
 
 export const mintScoreNFT = async (levelId: number): Promise<string> => {
-  console.log(`[Base Service] mintScoreNFT(${levelId})`);
   await new Promise(resolve => setTimeout(resolve, 1800));
-  return '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
-};
-
-/**
- * Sends a 'GM' transaction to the social contract on Base.
- * Optional social interaction.
- */
-export const sayGM = async (): Promise<string> => {
-  console.log(`[Base Service] Broadcasting GM to ${BASE_RPC_URL}`);
-  // Simulate transaction confirmation
-  await new Promise(resolve => setTimeout(resolve, 1200));
   return '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
 };
 
