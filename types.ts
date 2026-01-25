@@ -1,4 +1,3 @@
-
 export type TileType = 'blue' | 'purple' | 'teal' | 'pink' | 'amber';
 
 export enum SpecialEffect {
@@ -39,8 +38,10 @@ export interface LeaderboardEntry {
 export interface BlockchainState {
   isSyncing: boolean;
   isMinting: boolean;
+  isSendingGM: boolean;
   hasSynced: boolean;
   hasMinted: boolean;
+  hasSentGM: boolean;
   lastTxHash: string | null;
 }
 

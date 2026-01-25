@@ -9,8 +9,10 @@ import Leaderboard from './components/Leaderboard';
 const INITIAL_BLOCKCHAIN_STATE: BlockchainState = {
   isSyncing: false,
   isMinting: false,
+  isSendingGM: false,
   hasSynced: false,
   hasMinted: false,
+  hasSentGM: false,
   lastTxHash: null,
 };
 
@@ -58,6 +60,22 @@ const App: React.FC = () => {
       setGameState(prev => ({ ...prev, walletConnected: true }));
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const onSayGM = async () => {
+    if (!walletAddress) {
+      await connectWallet();
+    }
+    setGameState(prev => ({ ...prev, blockchain: { ...prev.blockchain, isSendingGM: true } }));
+    try {
+      const hash = await baseL2.sayGM();
+      setGameState(prev => ({
+        ...prev,
+        blockchain: { ...prev.blockchain, isSendingGM: false, hasSentGM: true, lastTxHash: hash }
+      }));
+    } catch (e) {
+      setGameState(prev => ({ ...prev, blockchain: { ...prev.blockchain, isSendingGM: false } }));
     }
   };
 
@@ -232,8 +250,27 @@ const App: React.FC = () => {
           >
             Leaderboard
           </button>
+          
+          <div className="pt-4 border-t border-white/5">
+             <button 
+               onClick={onSayGM}
+               disabled={gameState.blockchain.isSendingGM || gameState.blockchain.hasSentGM}
+               className={`w-full py-4 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 border ${
+                 gameState.blockchain.hasSentGM 
+                 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                 : 'bg-white/5 border-white/10 text-blue-400 hover:bg-white/10'
+               }`}
+             >
+               {gameState.blockchain.isSendingGM ? 'Processing...' : (gameState.blockchain.hasSentGM ? 'GM RECORDED' : 'Say GM on Base')}
+               {!gameState.blockchain.hasSentGM && <span className="text-xs">👋</span>}
+             </button>
+             <p className="text-[9px] text-slate-600 mt-3 font-bold uppercase tracking-wider">
+               Optional social transaction. Gas fees apply.
+             </p>
+          </div>
         </div>
-        <div className="mt-16 opacity-30 flex flex-col items-center gap-3">
+        
+        <div className="mt-12 opacity-30 flex flex-col items-center gap-3">
           <p className="text-[9px] font-black uppercase tracking-[0.4em]">Optimized for Base Mainnet</p>
           <img src="https://base.org/images/base-logo.svg" alt="Base" className="h-4" />
         </div>
@@ -308,8 +345,6 @@ const App: React.FC = () => {
               />
             )))}
           </div>
-          
-          {/* Subtle reflection under board */}
           <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-blue-500/10 blur-xl rounded-full opacity-50" />
         </div>
 
@@ -345,18 +380,18 @@ const App: React.FC = () => {
                   style={{ width: `${Math.min(100, (gameState.score / currentLevelData.targetScore) * 100)}%` }} 
                />
             </div>
-            <div className="flex justify-between mt-1.5 opacity-40 text-[7px] xs:text-[9px] font-bold uppercase tracking-widest">
-              <span>Progress</span>
-              <span>{currentLevelData.targetScore} Required</span>
-            </div>
           </div>
 
-          {/* Hidden on mobile, shows extra info on desktop sidebar */}
-          <div className="hidden md:block mt-auto p-4 bg-blue-500/5 border border-blue-500/10 rounded-3xl">
-             <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-2 italic">Developer Log</p>
-             <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                Sequence stabilized. Cascade modules at 100%. Optional onchain sync available upon completion.
-             </p>
+          {/* Extra Sidebar Info - GM Quick Toggle */}
+          <div className="hidden md:block mt-auto p-5 bg-blue-500/5 border border-blue-500/10 rounded-[2rem]">
+             <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-3 italic">Social Context</p>
+             <button 
+               onClick={onSayGM}
+               disabled={gameState.blockchain.hasSentGM || gameState.blockchain.isSendingGM}
+               className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition flex items-center justify-center gap-2"
+             >
+               {gameState.blockchain.hasSentGM ? 'GM SENT ✅' : 'DROP A GM 🫡'}
+             </button>
           </div>
         </div>
 
@@ -369,21 +404,26 @@ const App: React.FC = () => {
               <h2 className="text-2xl xs:text-3xl font-black mb-1 tracking-tighter uppercase italic">SUCCESS</h2>
               <p className="text-blue-500 font-black text-[9px] xs:text-[10px] uppercase tracking-[0.4em] mb-10">LEVEL {gameState.level + 1} VERIFIED</p>
               
-              <div className="space-y-4 mb-10">
+              <div className="space-y-3 mb-10">
                 <button onClick={onSyncScore} disabled={gameState.blockchain.isSyncing || gameState.blockchain.hasSynced} className={`w-full py-4 px-6 rounded-[2rem] flex items-center justify-between font-black text-[10px] xs:text-[11px] uppercase tracking-widest border transition-all ${gameState.blockchain.hasSynced ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-white/5 border-white/10 text-white hover:border-blue-500/50'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${gameState.blockchain.hasSynced ? 'bg-emerald-500' : 'bg-blue-500 animate-pulse'}`} />
-                    <span>Sync Onchain</span>
-                  </div>
+                  <span>Sync Onchain</span>
                   <span className="opacity-40">{gameState.blockchain.isSyncing ? '...' : (gameState.blockchain.hasSynced ? 'DONE' : 'L2')}</span>
                 </button>
                 <button onClick={onMintNFT} disabled={gameState.blockchain.isMinting || gameState.blockchain.hasMinted} className={`w-full py-4 px-6 rounded-[2rem] flex items-center justify-between font-black text-[10px] xs:text-[11px] uppercase tracking-widest border transition-all ${gameState.blockchain.hasMinted ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-white/5 border-white/10 text-white hover:border-amber-500/50'} ${!gameState.blockchain.hasSynced ? 'opacity-30' : ''}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">🎖️</span>
-                    <span>Mint Badge</span>
-                  </div>
+                  <span>Mint Badge</span>
                   <span className="opacity-40">{gameState.blockchain.isMinting ? '...' : (gameState.blockchain.hasMinted ? 'OWNED' : 'NFT')}</span>
                 </button>
+                
+                <div className="pt-2">
+                   <p className="text-[8px] text-slate-600 mb-2 uppercase font-bold tracking-widest">Optional Action:</p>
+                   <button 
+                     onClick={onSayGM}
+                     disabled={gameState.blockchain.hasSentGM || gameState.blockchain.isSendingGM}
+                     className="w-full py-3 bg-blue-500/5 border border-blue-500/20 rounded-[1.5rem] text-[9px] font-black uppercase text-blue-400 tracking-widest flex items-center justify-center gap-2"
+                   >
+                     {gameState.blockchain.hasSentGM ? 'GM RECORDED 👋' : 'SAY GM ON BASE'}
+                   </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -418,7 +458,7 @@ const App: React.FC = () => {
            </div>
            <div className="h-3 w-px bg-white/10" />
            <p className="hidden xs:block">Build something that matters</p>
-           <p className="xs:hidden">Block 0921-X</p>
+           {gameState.blockchain.hasSentGM && <p className="text-emerald-500">GM SENT ✅</p>}
         </div>
       </footer>
     </div>

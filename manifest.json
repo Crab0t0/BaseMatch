@@ -1,16 +1,16 @@
 {
-  "name": "BaseMatch",
+  "name": "BaseMatch Pro",
   "short_name": "BaseMatch",
-  "description": "A mobile-friendly match-3 puzzle mini-game with optional onchain score tracking and collectible NFTs on Base.",
-  "start_url": "/",
-  "display": "browser",
+  "description": "A mobile-friendly match-3 puzzle mini-game with optional onchain social features and score tracking on Base.",
+  "start_url": ".",
+  "display": "standalone",
   "background_color": "#030303",
   "theme_color": "#0052FF",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "https://base.org/images/base-logo.svg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ],
   "categories": ["games", "puzzle"],
@@ -18,16 +18,12 @@
     "network": "base-mainnet",
     "features": [
       "optional score submission",
-      "optional NFT minting",
-      "offchain leaderboard"
+      "optional social interaction (GM)",
+      "optional NFT minting"
     ]
   },
   "permissions": {
     "walletConnection": "user-initiated",
-    "transactions": "user-confirmed",
-    "gasFees": "user-paid"
-  },
-  "privacy": {
-    "personalData": "none"
+    "transactions": "user-confirmed"
   }
 }
