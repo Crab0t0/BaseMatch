@@ -1,14 +1,14 @@
 {
-  "name": "BaseMatch Pro",
-  "short_name": "BaseMatch",
-  "description": "A mobile-friendly match-3 puzzle mini-game with optional onchain social features and score tracking on Base.",
+  "name": "Match Pro",
+  "short_name": "MatchPro",
+  "description": "A mobile-friendly match-3 puzzle game with optional onchain social features and score tracking on Base.",
   "start_url": "/",
   "display": "browser",
   "background_color": "#030303",
   "theme_color": "#0052FF",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon.png",
       "sizes": "192x192",
       "type": "image/png"
     }
@@ -19,14 +19,11 @@
     "features": [
       "optional score submission",
       "optional social interaction (GM)",
-      "optional NFT minting"
+      "optional digital collectable"
     ]
   },
   "permissions": {
     "walletConnection": "user-initiated",
     "transactions": "user-confirmed"
-  },
-  "privacy": {
-    "personalData": "none"
   }
 }
