@@ -1,22 +1,33 @@
 {
-  "name": "BaseMatch Pro",
+  "name": "BaseMatch",
   "short_name": "BaseMatch",
-  "description": "Premium Match-3 sequence built for the Base ecosystem. Optional onchain achievements.",
-  "start_url": ".",
-  "display": "standalone",
+  "description": "A mobile-friendly match-3 puzzle mini-game with optional onchain score tracking and collectible NFTs on Base.",
+  "start_url": "/",
+  "display": "browser",
   "background_color": "#030303",
   "theme_color": "#0052FF",
   "icons": [
     {
-      "src": "https://base.org/images/base-logo.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png"
     }
   ],
   "categories": ["games", "puzzle"],
-  "features": {
-    "blockchain": "optional",
-    "score_submission": "async",
-    "nft_rewards": "user_initiated"
+  "blockchain": {
+    "network": "base-mainnet",
+    "features": [
+      "optional score submission",
+      "optional NFT minting",
+      "offchain leaderboard"
+    ]
+  },
+  "permissions": {
+    "walletConnection": "user-initiated",
+    "transactions": "user-confirmed",
+    "gasFees": "user-paid"
+  },
+  "privacy": {
+    "personalData": "none"
   }
 }
