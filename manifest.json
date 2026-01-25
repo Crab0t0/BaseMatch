@@ -1,0 +1,22 @@
+{
+  "name": "BaseMatch Pro",
+  "short_name": "BaseMatch",
+  "description": "Premium Match-3 sequence built for the Base ecosystem. Optional onchain achievements.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#030303",
+  "theme_color": "#0052FF",
+  "icons": [
+    {
+      "src": "https://base.org/images/base-logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["games", "puzzle"],
+  "features": {
+    "blockchain": "optional",
+    "score_submission": "async",
+    "nft_rewards": "user_initiated"
+  }
+}

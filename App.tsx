@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tile, GameState, SpecialEffect, BlockchainState } from './types';
 import { GRID_SIZE, LEVELS } from './constants';
@@ -16,6 +15,7 @@ const INITIAL_BLOCKCHAIN_STATE: BlockchainState = {
 };
 
 const App: React.FC = () => {
+  const [view, setView] = useState<'welcome' | 'game' | 'leaderboard'>('welcome');
   const [gameState, setGameState] = useState<GameState>({
     grid: [],
     score: 0,
@@ -46,25 +46,25 @@ const App: React.FC = () => {
     }));
     setSelectedTile(null);
     setIsProcessing(false);
+    setView('game');
   }, []);
 
-  useEffect(() => {
-    startLevel(0);
-  }, [startLevel]);
-
   const connectWallet = async () => {
-    if (walletAddress) return;
+    if (walletAddress || isConnecting) return;
     setIsConnecting(true);
-    // Simulate Base Wallet connection
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setWalletAddress('0x862...f412');
-    setGameState(prev => ({ ...prev, walletConnected: true }));
-    setIsConnecting(false);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setWalletAddress('0x862...f412');
+      setGameState(prev => ({ ...prev, walletConnected: true }));
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const onSyncScore = async () => {
     if (!walletAddress) {
       await connectWallet();
+      return;
     }
     setGameState(prev => ({ ...prev, blockchain: { ...prev.blockchain, isSyncing: true } }));
     try {
@@ -81,6 +81,7 @@ const App: React.FC = () => {
   const onMintNFT = async () => {
     if (!gameState.blockchain.hasSynced) {
       await onSyncScore();
+      return;
     }
     setGameState(prev => ({ ...prev, blockchain: { ...prev.blockchain, isMinting: true } }));
     try {
@@ -168,7 +169,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleTileSelect = async (x: number, y: number) => {
-    if (isProcessing || gameState.status !== 'playing' || gameState.view !== 'game') return;
+    if (isProcessing || gameState.status !== 'playing' || view !== 'game') return;
     if (!selectedTile) {
       setSelectedTile({ x, y });
     } else {
@@ -208,10 +209,42 @@ const App: React.FC = () => {
     }
   };
 
-  if (gameState.view === 'leaderboard') {
+  if (view === 'welcome') {
+    return (
+      <div className="flex flex-col h-full bg-[#030303] text-white p-6 items-center justify-center text-center animate-in fade-in duration-700 pt-safe pb-safe">
+        <div className="w-20 h-20 xs:w-24 xs:h-24 rounded-3xl bg-[#0052FF] flex items-center justify-center p-4 mb-8 shadow-[0_0_50px_rgba(0,82,255,0.4)] relative">
+           <div className="w-full h-full rounded-full border-[6px] border-white" />
+           <div className="absolute inset-0 animate-pulse bg-blue-500/20 rounded-3xl blur-xl" />
+        </div>
+        <h1 className="text-4xl xs:text-5xl font-black italic tracking-tighter mb-4">BASEMATCH</h1>
+        <p className="text-slate-400 font-medium mb-12 max-w-[280px] text-sm xs:text-base leading-relaxed">High-performance Match-3 sequence built for the Base ecosystem.</p>
+        
+        <div className="w-full space-y-4 max-w-[260px]">
+          <button 
+            onClick={() => startLevel(0)}
+            className="w-full py-4 bg-[#0052FF] rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl active:scale-95 transition-all hover:brightness-110"
+          >
+            Play Game
+          </button>
+          <button 
+            onClick={() => setView('leaderboard')}
+            className="w-full py-4 bg-white/5 border border-white/10 rounded-[2rem] font-black text-sm uppercase tracking-widest hover:bg-white/10 transition active:scale-95 text-slate-300"
+          >
+            Leaderboard
+          </button>
+        </div>
+        <div className="mt-16 opacity-30 flex flex-col items-center gap-3">
+          <p className="text-[9px] font-black uppercase tracking-[0.4em]">Optimized for Base Mainnet</p>
+          <img src="https://base.org/images/base-logo.svg" alt="Base" className="h-4" />
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'leaderboard') {
     return (
       <Leaderboard 
-        onBack={() => setGameState(prev => ({ ...prev, view: 'game' }))} 
+        onBack={() => setView(gameState.status === 'playing' ? 'game' : 'welcome')} 
         userAddress={walletAddress}
         currentLevel={gameState.level}
       />
@@ -221,187 +254,171 @@ const App: React.FC = () => {
   const currentLevelData = LEVELS[gameState.level];
 
   return (
-    <div className="flex flex-col h-full bg-[#030303] text-white overflow-hidden selection:bg-blue-500/30 font-sans">
-      {/* Navigation (Strict Compliance: Clear Wallet State) */}
-      <nav className="px-6 py-5 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-3xl sticky top-0 z-[100]">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-[#0052FF] flex items-center justify-center p-2 shadow-lg shadow-blue-500/30">
-             <div className="w-full h-full rounded-full border-[2.5px] border-white" />
+    <div className="flex flex-col h-full bg-[#030303] text-white overflow-hidden selection:bg-blue-500/30 font-sans pt-safe pb-safe">
+      {/* Header */}
+      <nav className="h-[60px] xs:h-[70px] flex-none px-4 xs:px-8 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-3xl z-[100]">
+        <div className="flex items-center gap-3" onClick={() => setView('welcome')}>
+          <div className="w-8 h-8 xs:w-10 xs:h-10 rounded-xl bg-[#0052FF] flex items-center justify-center p-1.5 shadow-lg shadow-blue-500/30">
+             <div className="w-full h-full rounded-full border-[2px] border-white" />
           </div>
-          <div>
-            <h1 className="text-xl font-black leading-none tracking-tight italic">BASEMATCH</h1>
-            <div className="flex items-center gap-1.5 mt-1">
-               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,1)]" />
-               <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">Offchain Primary</p>
+          <div className="hidden xs:block">
+            <h1 className="text-base font-black leading-none tracking-tight italic uppercase">BASEMATCH</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+               <span className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
+               <p className="text-[8px] text-emerald-400 font-black uppercase tracking-widest">Mainnet Live</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 xs:gap-3">
           <button 
-            onClick={() => setGameState(prev => ({ ...prev, view: 'leaderboard' }))}
-            className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition active:scale-90"
-            aria-label="Leaderboard"
+            onClick={() => setView('leaderboard')}
+            className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition active:scale-90"
           >
             📊
           </button>
           <button 
             onClick={connectWallet}
-            className={`px-6 py-2.5 rounded-full font-black text-[11px] uppercase tracking-wider transition-all shadow-xl active:scale-95 border ${
+            className={`px-4 py-2 rounded-full font-black text-[9px] xs:text-[10px] uppercase tracking-wider transition-all shadow-xl active:scale-95 border ${
               walletAddress 
-              ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' 
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
               : 'bg-[#0052FF] text-white border-blue-600'
             }`}
           >
-            {isConnecting ? '...' : (walletAddress || 'Connect')}
+            {isConnecting ? '...' : (walletAddress ? 'Linked' : 'Link Wallet')}
           </button>
         </div>
       </nav>
 
-      {/* Stats Dashboard */}
-      <div className="grid grid-cols-2 gap-4 p-6">
-        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 relative overflow-hidden">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Energy</p>
-          <p className={`text-4xl font-black tabular-nums tracking-tighter ${gameState.movesLeft < 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
-            {gameState.movesLeft}
-          </p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 relative overflow-hidden">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Score</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-black tabular-nums tracking-tighter text-[#0052FF]">{gameState.score}</span>
-          </div>
-          <div className="w-full mt-3 bg-white/5 h-1.5 rounded-full overflow-hidden">
-             <div className="h-full bg-gradient-to-r from-[#0052FF] to-blue-400 transition-all duration-700 ease-out" style={{ width: `${Math.min(100, (gameState.score / currentLevelData.targetScore) * 100)}%` }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid View */}
-      <div className="flex-1 flex items-center justify-center p-6 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] bg-[#0052FF]/10 rounded-full blur-[120px] pointer-events-none opacity-40" />
+      {/* Main Container - Responsive Layout */}
+      <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-3 xs:p-6 md:p-10 relative overflow-hidden min-h-0 gap-6 md:gap-12">
+        <div className="absolute inset-0 bg-radial-gradient from-[#0052FF]/5 to-transparent pointer-events-none opacity-40 blur-3xl" />
         
-        <div 
-          className="grid gap-2 bg-white/5 p-4 rounded-[3.5rem] border border-white/10 aspect-square w-full max-w-[500px] relative z-10 shadow-2xl"
-          style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
-        >
-          {gameState.grid.map((row, y) => row.map((tile, x) => (
-            <TileComponent
-              key={tile?.id || `empty-${x}-${y}`}
-              tile={tile}
-              isSelected={selectedTile?.x === x && selectedTile?.y === y}
-              onSelect={handleTileSelect}
-            />
-          )))}
+        {/* Left/Main Column: Game Board */}
+        <div className="relative w-full max-w-[min(85vw,calc(100dvh-200px))] aspect-square order-2 md:order-1">
+          <div 
+            className="grid gap-1 xs:gap-1.5 bg-white/5 p-2 xs:p-3 rounded-[2.5rem] xs:rounded-[3.5rem] border border-white/10 w-full h-full relative z-10 shadow-[0_0_100px_rgba(0,0,0,0.5)] backdrop-blur-md"
+            style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
+          >
+            {gameState.grid.map((row, y) => row.map((tile, x) => (
+              <TileComponent
+                key={tile?.id || `empty-${x}-${y}`}
+                tile={tile}
+                isSelected={selectedTile?.x === x && selectedTile?.y === y}
+                onSelect={handleTileSelect}
+              />
+            )))}
+          </div>
+          
+          {/* Subtle reflection under board */}
+          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-blue-500/10 blur-xl rounded-full opacity-50" />
         </div>
 
-        {/* Level Complete Overlay (Compliance: Clear Optional Flow) */}
+        {/* Right/Side Column: Stats Dashboard */}
+        <div className="w-full md:w-[280px] flex flex-row md:flex-col gap-3 xs:gap-4 order-1 md:order-2">
+          {/* Moves Card */}
+          <div className="flex-1 md:flex-none bg-white/5 border border-white/10 rounded-2xl xs:rounded-3xl p-3 xs:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-colors">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full" />
+            <p className="text-[8px] xs:text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] mb-1">Energy / Moves</p>
+            <div className="flex items-center justify-between">
+              <p className={`text-3xl xs:text-5xl font-black tabular-nums tracking-tighter ${gameState.movesLeft < 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
+                {gameState.movesLeft}
+              </p>
+              <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs">⚡</div>
+            </div>
+          </div>
+
+          {/* Score Card */}
+          <div className="flex-1 md:flex-none bg-white/5 border border-white/10 rounded-2xl xs:rounded-3xl p-3 xs:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-colors">
+            <div className="absolute bottom-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full" />
+            <div className="flex justify-between items-center mb-1">
+              <p className="text-[8px] xs:text-[10px] font-black text-slate-500 uppercase tracking-[0.25em]">Sequence Score</p>
+              <p className="text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.1em]">Lv.{gameState.level + 1}</p>
+            </div>
+            <p className="text-3xl xs:text-5xl font-black tabular-nums tracking-tighter text-[#0052FF]">
+              {gameState.score.toLocaleString()}
+            </p>
+            
+            <div className="w-full mt-3 xs:mt-4 bg-white/10 h-1.5 xs:h-2 rounded-full overflow-hidden relative">
+               <div className="absolute inset-0 bg-blue-500/20 blur-sm" />
+               <div 
+                  className="h-full bg-gradient-to-r from-[#0052FF] to-blue-400 transition-all duration-700 ease-out shadow-[0_0_12px_rgba(0,82,255,0.6)] relative z-10" 
+                  style={{ width: `${Math.min(100, (gameState.score / currentLevelData.targetScore) * 100)}%` }} 
+               />
+            </div>
+            <div className="flex justify-between mt-1.5 opacity-40 text-[7px] xs:text-[9px] font-bold uppercase tracking-widest">
+              <span>Progress</span>
+              <span>{currentLevelData.targetScore} Required</span>
+            </div>
+          </div>
+
+          {/* Hidden on mobile, shows extra info on desktop sidebar */}
+          <div className="hidden md:block mt-auto p-4 bg-blue-500/5 border border-blue-500/10 rounded-3xl">
+             <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-2 italic">Developer Log</p>
+             <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                Sequence stabilized. Cascade modules at 100%. Optional onchain sync available upon completion.
+             </p>
+          </div>
+        </div>
+
+        {/* Status Overlays */}
         {gameState.status === 'won' && (
-          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-6 animate-in fade-in zoom-in duration-500">
-            <div className="bg-[#0A0A0A] border border-white/10 p-10 rounded-[4rem] shadow-[0_0_80px_rgba(0,82,255,0.2)] w-full max-w-sm text-center relative overflow-hidden">
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-4 animate-in fade-in zoom-in duration-300">
+            <div className="bg-[#0A0A0A] border border-white/10 p-8 xs:p-10 rounded-[4rem] shadow-[0_0_100px_rgba(0,82,255,0.3)] w-full max-w-sm text-center relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+              <div className="w-16 h-16 xs:w-20 xs:h-20 rounded-full mx-auto mb-8 bg-gradient-to-br from-[#0052FF] to-blue-400 flex items-center justify-center shadow-[0_0_40px_rgba(0,82,255,0.4)] animate-bounce text-4xl">💎</div>
+              <h2 className="text-2xl xs:text-3xl font-black mb-1 tracking-tighter uppercase italic">SUCCESS</h2>
+              <p className="text-blue-500 font-black text-[9px] xs:text-[10px] uppercase tracking-[0.4em] mb-10">LEVEL {gameState.level + 1} VERIFIED</p>
               
-              <div className="w-24 h-24 rounded-full mx-auto mb-8 bg-gradient-to-br from-[#0052FF] to-blue-400 flex items-center justify-center shadow-[0_0_30px_rgba(0,82,255,0.4)] animate-bounce">
-                <span className="text-5xl">💎</span>
-              </div>
-              
-              <h2 className="text-4xl font-black mb-1 tracking-tighter uppercase italic">SECURED</h2>
-              <p className="text-blue-500 font-black text-[11px] uppercase tracking-[0.3em] mb-10">LEVEL {gameState.level + 1} COMPLETE</p>
-              
-              <div className="space-y-4 mb-10 text-left">
-                {/* Information Card (Compliance) */}
-                <div className="px-5 py-3 bg-white/5 rounded-2xl border border-white/5 mb-6">
-                   <p className="text-[10px] text-slate-500 font-bold leading-tight">
-                     Onchain actions are entirely optional. Submit your score to join the global leaderboard or claim a commemorative NFT.
-                   </p>
-                </div>
-
-                {/* Optional Score Submission */}
-                <button 
-                  onClick={onSyncScore}
-                  disabled={gameState.blockchain.isSyncing || gameState.blockchain.hasSynced}
-                  className={`w-full py-5 px-6 rounded-3xl flex items-center justify-between font-black text-xs transition-all border ${
-                    gameState.blockchain.hasSynced 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                    : 'bg-white/5 border-white/10 hover:border-[#0052FF]/40 text-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-2.5 h-2.5 rounded-full ${gameState.blockchain.hasSynced ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,1)]' : 'bg-blue-500 animate-pulse'}`} />
-                    <span className="uppercase tracking-[0.15em]">SAVE ONCHAIN</span>
+              <div className="space-y-4 mb-10">
+                <button onClick={onSyncScore} disabled={gameState.blockchain.isSyncing || gameState.blockchain.hasSynced} className={`w-full py-4 px-6 rounded-[2rem] flex items-center justify-between font-black text-[10px] xs:text-[11px] uppercase tracking-widest border transition-all ${gameState.blockchain.hasSynced ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-white/5 border-white/10 text-white hover:border-blue-500/50'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${gameState.blockchain.hasSynced ? 'bg-emerald-500' : 'bg-blue-500 animate-pulse'}`} />
+                    <span>Sync Onchain</span>
                   </div>
-                  <span className="opacity-60">{gameState.blockchain.isSyncing ? '...' : (gameState.blockchain.hasSynced ? 'SYNCED' : 'GAS OPT')}</span>
+                  <span className="opacity-40">{gameState.blockchain.isSyncing ? '...' : (gameState.blockchain.hasSynced ? 'DONE' : 'L2')}</span>
                 </button>
-
-                {/* Optional NFT Claim */}
-                <button 
-                  onClick={onMintNFT}
-                  disabled={gameState.blockchain.isMinting || gameState.blockchain.hasMinted}
-                  className={`w-full py-5 px-6 rounded-3xl flex items-center justify-between font-black text-xs transition-all border ${
-                    gameState.blockchain.hasMinted 
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
-                    : 'bg-white/5 border-white/10 hover:border-amber-500/40 text-slate-100'
-                  } ${!gameState.blockchain.hasSynced ? 'opacity-30 cursor-not-allowed' : ''}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-xl">🎖️</span>
-                    <span className="uppercase tracking-[0.15em]">MINT BADGE</span>
+                <button onClick={onMintNFT} disabled={gameState.blockchain.isMinting || gameState.blockchain.hasMinted} className={`w-full py-4 px-6 rounded-[2rem] flex items-center justify-between font-black text-[10px] xs:text-[11px] uppercase tracking-widest border transition-all ${gameState.blockchain.hasMinted ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-white/5 border-white/10 text-white hover:border-amber-500/50'} ${!gameState.blockchain.hasSynced ? 'opacity-30' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">🎖️</span>
+                    <span>Mint Badge</span>
                   </div>
-                  <span className="opacity-60">{gameState.blockchain.isMinting ? '...' : (gameState.blockchain.hasMinted ? 'COLLECTED' : 'LEVEL 1')}</span>
+                  <span className="opacity-40">{gameState.blockchain.isMinting ? '...' : (gameState.blockchain.hasMinted ? 'OWNED' : 'NFT')}</span>
                 </button>
               </div>
 
-              {gameState.blockchain.lastTxHash && (
-                <div className="mb-8 px-5 py-3 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-left">
-                   <p className="text-[9px] text-emerald-500/70 uppercase font-black tracking-widest mb-1">TX CONFIRMED</p>
-                   <p className="text-[10px] text-emerald-400 font-mono truncate">{gameState.blockchain.lastTxHash}</p>
-                </div>
-              )}
-              
               <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setGameState(prev => ({ ...prev, view: 'leaderboard' }))}
-                  className="py-5 rounded-[2rem] bg-white/5 text-slate-500 font-black text-[11px] uppercase tracking-widest hover:bg-white/10 transition"
-                >
-                  RANKS
-                </button>
-                <button 
-                  onClick={() => startLevel(gameState.level < LEVELS.length - 1 ? gameState.level + 1 : 0)}
-                  className="py-5 rounded-[2rem] bg-[#0052FF] text-white font-black text-[11px] uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:scale-105 transition active:scale-95"
-                >
-                  NEXT
-                </button>
+                <button onClick={() => setView('welcome')} className="py-4 rounded-[2rem] bg-white/5 text-slate-500 font-black text-[11px] uppercase tracking-widest hover:bg-white/10">Exit</button>
+                <button onClick={() => startLevel(gameState.level < LEVELS.length - 1 ? gameState.level + 1 : 0)} className="py-4 rounded-[2rem] bg-[#0052FF] text-white font-black text-[11px] uppercase tracking-widest shadow-xl shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all">Next</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Failed Overlay */}
         {gameState.status === 'lost' && (
-          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-6">
-            <div className="bg-[#0A0A0A] border border-white/10 p-10 rounded-[4rem] shadow-2xl w-full max-w-sm text-center">
-              <div className="w-20 h-20 rounded-full mx-auto mb-8 bg-rose-500/10 text-rose-500 flex items-center justify-center text-4xl font-black shadow-[0_0_20px_rgba(244,63,94,0.2)]">!</div>
-              <h2 className="text-3xl font-black mb-3 italic uppercase tracking-tighter">DROPPED</h2>
-              <p className="text-slate-500 text-sm mb-10 px-6 leading-relaxed">Network power depleted. Retry the block to secure your score.</p>
-              <button 
-                onClick={() => startLevel(gameState.level)} 
-                className="w-full py-5 bg-[#0052FF] rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 active:scale-95 transition"
-              >
-                RETRY BLOCK
-              </button>
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-4 animate-in fade-in duration-300">
+            <div className="bg-[#0A0A0A] border border-white/10 p-8 xs:p-10 rounded-[4rem] shadow-2xl w-full max-w-sm text-center">
+              <div className="w-14 h-14 xs:w-16 xs:h-16 rounded-full mx-auto mb-8 bg-rose-500/10 text-rose-500 flex items-center justify-center text-3xl font-black shadow-[0_0_20px_rgba(244,63,94,0.2)]">!</div>
+              <h2 className="text-2xl xs:text-3xl font-black mb-3 italic uppercase tracking-tighter text-rose-500">DROPPED</h2>
+              <p className="text-slate-500 text-[11px] xs:text-[12px] mb-10 px-4 leading-relaxed font-medium">Network mismatch. Energy levels depleted. Retry to secure the block sequence.</p>
+              <div className="space-y-4">
+                <button onClick={() => startLevel(gameState.level)} className="w-full py-4 bg-[#0052FF] rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 active:scale-95 transition">Retry</button>
+                <button onClick={() => setView('welcome')} className="w-full py-4 bg-white/5 rounded-[2rem] font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-white/10 transition">Main Menu</button>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer Branding (Compliance: Explicit Network & Status) */}
-      <footer className="px-8 pb-8">
-        <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex items-center justify-between text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
-           <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,1)]" />
+      {/* Footer Network Indicator */}
+      <footer className="h-[40px] xs:h-[50px] flex-none px-8 flex items-center justify-center border-t border-white/5 bg-black/40 backdrop-blur-xl">
+        <div className="flex items-center gap-6 text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
               Base Mainnet Active
            </div>
-           <div className="h-4 w-px bg-white/10" />
-           <p>Build Something that Matters</p>
+           <div className="h-3 w-px bg-white/10" />
+           <p className="hidden xs:block">Build something that matters</p>
+           <p className="xs:hidden">Block 0921-X</p>
         </div>
       </footer>
     </div>
