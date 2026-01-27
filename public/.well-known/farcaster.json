@@ -1,5 +1,6 @@
-"miniapp": {
-  "version": "1",
+{
+  "miniapp": {
+    "version": "1",
     "name": "base-match",
     "iconUrl": "https://base-match-eta.vercel.app/icon.png",
     "homeUrl": "https://base-match-eta.vercel.app",
@@ -7,23 +8,5 @@
     "splashBackgroundColor": "#0000FF",
     "heroImageUrl": "https://base-match-eta.vercel.app/hero.png",
     "tagline": "Match. Relax. Win."
-  "version": "1",
-  "name": "BaseMatch Pro",
-  "homeUrl": "https://base-match-eta.vercel.app",
-  "iconUrl": "https://base-match-eta.vercel.app/icon-192.png",
-  "imageUrl": "https://base-match-eta.vercel.app/icon-192.png",
-  "splashImageUrl": "https://base-match-eta.vercel.app/icon-192.png",
-  "splashBackgroundColor": "#0052FF",
-  "subtitle": "Match-3 puzzle",
-  "description": "A mobile-friendly match-3 puzzle mini-game with optional onchain social interaction (GM).",
-  "primaryCategory": "games",
-  "tags": ["games", "puzzle", "match3"],
-  "tagline": "Match. Relax. Win.",
-  "heroImageUrl": "https://base-match-eta.vercel.app/icon-192.png",
-  "screenshotUrls": [
-    "https://base-match-eta.vercel.app/icon-192.png"
-  ],
-  "ogTitle": "BaseMatch Pro",
-  "ogDescription": "Match-3 puzzle mini-game on Base.",
-  "ogImageUrl": "https://base-match-eta.vercel.app/BaseMatch.png"
+  }
 }
