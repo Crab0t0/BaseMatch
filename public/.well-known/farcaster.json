@@ -1,5 +1,13 @@
 "miniapp": {
   "version": "1",
+    "name": "base-match",
+    "iconUrl": "https://base-match-eta.vercel.app/icon.png",
+    "homeUrl": "https://base-match-eta.vercel.app",
+    "splashImageUrl": "https://base-match-eta.vercel.app/splash.png",
+    "splashBackgroundColor": "#0000FF",
+    "heroImageUrl": "https://base-match-eta.vercel.app/hero.png",
+    "tagline": "Match. Relax. Win."
+  "version": "1",
   "name": "BaseMatch Pro",
   "homeUrl": "https://base-match-eta.vercel.app",
   "iconUrl": "https://base-match-eta.vercel.app/icon-192.png",
