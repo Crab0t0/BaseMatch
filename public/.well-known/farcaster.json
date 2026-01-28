@@ -16,6 +16,6 @@
     "tags": ["CasualGame", "miniapp", "baseapp", "PuzzleGame", "TimeKiller" ],
     "heroImageUrl": "https://base-match-eta.vercel.app/hero.png",
     "tagline": "Match. Relax. Win."
-    "noindex": false
+    
   }
 }
