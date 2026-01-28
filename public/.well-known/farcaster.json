@@ -13,6 +13,7 @@
     "splashBackgroundColor": "#0000FF",
     "heroImageUrl": "https://base-match-eta.vercel.app/hero.png",
     "primaryCategory": "games",
+    "tags": ["CasualGame", "miniapp", "baseapp", "PuzzleGame", "TimeKiller" ],
     "tagline": "Match. Relax. Win."
   }
 }
