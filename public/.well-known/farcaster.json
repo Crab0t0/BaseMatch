@@ -12,7 +12,7 @@
     "splashImageUrl": "https://base-match-eta.vercel.app/splash.png",
     "splashBackgroundColor": "#0000FF",
     "heroImageUrl": "https://base-match-eta.vercel.app/hero.png",
-    "primaryCategory": "game",
+    "primaryCategory": "games",
     "tagline": "Match. Relax. Win."
   }
 }
